@@ -1,4 +1,4 @@
-from observateurs import Observateur
+from observateurs.observateur import Observateur
 
 
 class AfficherPortfolio(Observateur):

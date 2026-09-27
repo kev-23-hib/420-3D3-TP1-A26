@@ -1,6 +1,6 @@
 #importation des modules nécessaires
-from app import recuperer_prix
-from sujet import Sujet
+from utilitaires import recuperer_prix
+from modeles.sujet import Sujet
 
 #titres avec leurs quantités et seuils de prix
 TITRES = {
@@ -84,4 +84,4 @@ class Portefeuille(Sujet):
             "portfolio": self.portfolio,
             "alert": self.alert
         }
-    #creation de la classe concre
+    

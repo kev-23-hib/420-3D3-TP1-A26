@@ -1,5 +1,5 @@
-from observateurs import Observateur
-from app import formater_prix
+from observateurs.observateur import Observateur
+from utilitaires import formater_prix
 
 class AfficherPrix(Observateur):
 

@@ -3,8 +3,17 @@
 # des alertes de seuil et journalise chaque cycle dans portfolio.csv.
 
 import tkinter as tk
-import yfinance as yf
+# import yfinance as yf
 from datetime import datetime
+from utilitaires import (
+    recuperer_prix,
+    formater_prix,
+    entier_positif,
+    flottant_positif
+)
+from modeles.portefeuille import Portefeuille
+from observateurs.AfficherPrix import AfficherPrix
+from observateurs.AfficherPortfolio import AfficherPortfolio
 
 
 # Portefeuille initial : quantité détenue + seuils d'alerte par ticker.
@@ -27,38 +36,40 @@ POLICE_VALEUR = ("Segoe UI", 13, "bold")
 # validation. Regroupées ici pour être réutilisées à la fois par l'ajout de
 # titres et le cycle de rafraîchissement, sans dupliquer la logique.
 
-def recuperer_prix(ticker):
-    """Retourne (prix, ouverture) pour un ticker, ou lève une erreur s'il est introuvable."""
-    info = yf.Ticker(ticker).fast_info
-    prix = info["last_price"]
-    if prix is None:
-        raise ValueError(f"Le titre '{ticker}' n'existe pas.")
-    return prix, info["open"]
+
+# def recuperer_prix(ticker):
+#     """Retourne (prix, ouverture) pour un ticker, ou lève une erreur s'il est introuvable."""
+#     info = yf.Ticker(ticker).fast_info
+#     prix = info["last_price"]
+#     if prix is None:
+#         raise ValueError(f"Le titre '{ticker}' n'existe pas.")
+#     return prix, info["open"]
 
 
-def formater_prix(prix, ouverture):
-    """Retourne le texte et la couleur à afficher pour un prix et sa variation
-    par rapport à l'ouverture (vert si en hausse, rouge si en baisse)."""
-    variation = (prix - ouverture) / ouverture * 100
-    symbole = "▲" if variation >= 0 else "▼"
-    couleur = "green" if variation >= 0 else "red"
-    return f"{prix:.2f} $  {symbole} {abs(variation):.2f}%", couleur
+# def formater_prix(prix, ouverture):
+#     """Retourne le texte et la couleur à afficher pour un prix et sa variation
+#     par rapport à l'ouverture (vert si en hausse, rouge si en baisse)."""
+#     variation = (prix - ouverture) / ouverture * 100
+#     symbole = "▲" if variation >= 0 else "▼"
+#     couleur = "green" if variation >= 0 else "red"
+#     return f"{prix:.2f} $  {symbole} {abs(variation):.2f}%", couleur
 
 
-def entier_positif(texte):
-    """Convertit `texte` en entier strictement positif, ou lève ValueError."""
-    valeur = int(texte)
-    if valeur <= 0:
-        raise ValueError
-    return valeur
+# def entier_positif(texte):
+#     """Convertit `texte` en entier strictement positif, ou lève ValueError."""
+#     valeur = int(texte)
+#     if valeur <= 0:
+#         raise ValueError
+#     return valeur
 
 
-def flottant_positif(texte):
-    """Convertit `texte` en nombre décimal strictement positif, ou lève ValueError."""
-    valeur = float(texte)
-    if valeur <= 0:
-        raise ValueError
-    return valeur
+# def flottant_positif(texte):
+#     """Convertit `texte` en nombre décimal strictement positif, ou lève ValueError."""
+#     valeur = float(texte)
+#     if valeur <= 0:
+#         raise ValueError
+#     return valeur
+
 
 
 class App:
@@ -73,6 +84,7 @@ class App:
         # la détruire proprement quand un titre est retiré
         self.labels_prix = {}
         self.frames_prix = {}
+        self.portefeuille = Portefeuille()
 
         tk.Label(self.fenetre, text="Portfolio Tracker", font=POLICE_TITRE).pack(pady=10)
 
@@ -91,8 +103,21 @@ class App:
         frame_portfolio.pack(fill=tk.X, padx=10, pady=5)
         self.label_valeur = tk.Label(frame_portfolio, text="Valeur totale : calcul en cours...", font=POLICE_VALEUR)
         self.label_valeur.pack()
+
+
+
+
         self.label_variation = tk.Label(frame_portfolio, text="")
         self.label_variation.pack()
+        self.afficher_prix = AfficherPrix(self.labels_prix)
+        self.afficher_portfolio = AfficherPortfolio(self.label_valeur,self.label_variation)
+        self.portefeuille.abonner(self.afficher_prix)
+        self.portefeuille.abonner(self.afficher_portfolio)
+
+
+
+
+
 
         # Section "Alertes" : liste des titres ayant franchi un seuil, ou message par défaut
         frame_alertes = tk.LabelFrame(self.fenetre, text="Alertes", padx=10, pady=10)
@@ -332,25 +357,28 @@ class App:
         puis se replanifie elle-même dans INTERVALLE_MS millisecondes.
         Toute erreur (ex. réseau) est affichée sans interrompre le cycle."""
         try:
+
+            self.portefeuille.actualiser_portefeuille()
+            prix_actuels = self.portefeuille.get_donnees()["prix_en_temps_reel"]
             # 1. Récupération des prix actuels pour tous les titres du portefeuille
-            prix_actuels = {ticker: recuperer_prix(ticker) for ticker in TITRES}
+            #prix_actuels = {ticker: recuperer_prix(ticker) for ticker in TITRES}
 
             # 2. Mise à jour de l'affichage prix/variation de chaque titre
-            for ticker, (prix, ouverture) in prix_actuels.items():
-                texte, couleur = formater_prix(prix, ouverture)
-                self.labels_prix[ticker].config(text=texte, fg=couleur)
+            #for ticker, (prix, ouverture) in prix_actuels.items():
+                #texte, couleur = formater_prix(prix, ouverture)
+                #self.labels_prix[ticker].config(text=texte, fg=couleur)
 
             # 3. Valeur totale du portefeuille et variation depuis l'ouverture
-            valeur_totale = sum(prix * TITRES[t]["quantite"] for t, (prix, _) in prix_actuels.items())
-            valeur_ouverture = sum(ouv * TITRES[t]["quantite"] for t, (_, ouv) in prix_actuels.items())
-            variation_portfolio = valeur_totale - valeur_ouverture
+            #valeur_totale = sum(prix * TITRES[t]["quantite"] for t, (prix, _) in prix_actuels.items())
+            #valeur_ouverture = sum(ouv * TITRES[t]["quantite"] for t, (_, ouv) in prix_actuels.items())
+            #variation_portfolio = valeur_totale - valeur_ouverture
 
-            self.label_valeur.config(text=f"Valeur totale : {valeur_totale:.2f} $")
-            symbole = "▲" if variation_portfolio >= 0 else "▼"
-            self.label_variation.config(
-                text=f"{symbole} {abs(variation_portfolio):.2f} $ depuis l'ouverture",
-                fg="green" if variation_portfolio >= 0 else "red",
-            )
+            #self.label_valeur.config(text=f"Valeur totale : {valeur_totale:.2f} $")
+            #symbole = "▲" if variation_portfolio >= 0 else "▼"
+            #self.label_variation.config(
+                #text=f"{symbole} {abs(variation_portfolio):.2f} $ depuis l'ouverture",
+                #fg="green" if variation_portfolio >= 0 else "red",
+            #)
 
             # 4. Alertes : un titre est signalé s'il atteint ou dépasse son seuil haut,
             # ou atteint ou descend sous son seuil bas
