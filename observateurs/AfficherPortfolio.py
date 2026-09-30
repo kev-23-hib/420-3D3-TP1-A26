@@ -1,11 +1,29 @@
 from observateurs.observateur import Observateur
-
+import tkinter as tk
 
 class AfficherPortfolio(Observateur):
 
-    def __init__(self, label_valeur, label_variation):
-        self.label_valeur = label_valeur
-        self.label_variation = label_variation
+    def __init__(self, parent):
+        self.frame = tk.LabelFrame(
+            parent,
+            text="Valeur du portefeuille",
+            padx=10,
+            pady=10
+        )
+        self.frame.pack(fill="x", padx=20, pady=10)
+
+        self.label_valeur = tk.Label(
+            self.frame,
+            text="Valeur totale : 0.00 $",
+            font=("Segoe UI", 13, "bold")
+        )
+        self.label_valeur.pack(anchor="w")
+
+        self.label_variation = tk.Label(
+            self.frame,
+            text="▲ 0.00 $ depuis l'ouverture"
+        )
+        self.label_variation.pack(anchor="w")
 
     def actualiser(self, sujet) -> None:
         donnees = sujet.get_donnees()
