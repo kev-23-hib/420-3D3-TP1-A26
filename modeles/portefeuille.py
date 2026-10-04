@@ -18,7 +18,7 @@ class Portefeuille(Sujet):
         self.prix_en_temps_reel = {}
         self.gestion_titre = TITRES
         self.portfolio = 0
-        self.alert = None
+     
 
     #actualisation du portefeuille en récupérant les prix en temps réel et en calculant la valeur totale du portefeuille
     def actualiser_portefeuille(self):

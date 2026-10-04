@@ -15,6 +15,7 @@ class AfficherPrix(Observateur):
         self.frame.pack(fill="x", padx=20, pady=10)
 
         self.labels_prix = {}
+        self.frames_prix = {}
 
         for ticker in titres:
             self._creer_ligne(ticker)
@@ -37,6 +38,7 @@ class AfficherPrix(Observateur):
         label_prix.pack(side="left")
 
         self.labels_prix[ticker] = label_prix
+        self.frames_prix[ticker] = ligne
 
     def ajouter_titre(self, ticker):
         if ticker not in self.labels_prix:
