@@ -52,6 +52,10 @@ class Portefeuille(Sujet):
     def retirer_titre(self, ticket):
         if ticket in self.gestion_titre:
             del self.gestion_titre[ticket]
+            if ticket in self.prix_en_temps_reel:
+                del self.prix_en_temps_reel[ticket]
+
+
             self.actualiser_portefeuille()
         else:
             print(f"Le titre {ticket} n'existe pas dans le portefeuille.")

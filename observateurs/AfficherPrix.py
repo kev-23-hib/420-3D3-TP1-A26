@@ -48,6 +48,7 @@ class AfficherPrix(Observateur):
         if ticker in self.labels_prix:
             self.labels_prix[ticker].master.destroy()
             del self.labels_prix[ticker]
+            del self.frames_prix[ticker]
 
     def actualiser(self, sujet):
         donnees = sujet.get_donnees()
