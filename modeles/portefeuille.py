@@ -27,8 +27,7 @@ class Portefeuille(Sujet):
         
             titre = self.gestion_titre[ticket]
             quantite = titre["quantite"]
-            seuil_haut = titre["seuil_haut"]
-            seuil_bas = titre["seuil_bas"]
+
 
             prix, ouverture = recuperer_prix(ticket)
             self.prix_en_temps_reel[ticket] = (prix, ouverture)
@@ -82,6 +81,5 @@ class Portefeuille(Sujet):
             "prix_en_temps_reel": self.prix_en_temps_reel,
             "gestion_titre": self.gestion_titre,
             "portfolio": self.portfolio,
-            "alert": self.alert
         }
     

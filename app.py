@@ -5,6 +5,8 @@
 import tkinter as tk
 # import yfinance as yf
 from datetime import datetime
+from observateurs.AfficherAlertes import AfficherAlertes
+from observateurs.SauvegardeCSV import SauvegardeCSV
 from utilitaires import (
     recuperer_prix,
     formater_prix,
@@ -109,10 +111,15 @@ class App:
 
         self.label_variation = tk.Label(frame_portfolio, text="")
         self.label_variation.pack()
-        self.afficher_prix = AfficherPrix(self.labels_prix)
-        self.afficher_portfolio = AfficherPortfolio(self.label_valeur,self.label_variation)
+        self.portefeuille = Portefeuille()
+        self.afficher_prix = AfficherPrix(self.fenetre, self.portefeuille.gestion_titre())
+        self.afficher_portfolio = AfficherPortfolio(self.fenetre)
+        self.AfficherAlertes = AfficherAlertes(self.fenetre)
+        self.SauvegardeCSV = SauvegardeCSV(self.fenetre)
         self.portefeuille.abonner(self.afficher_prix)
         self.portefeuille.abonner(self.afficher_portfolio)
+        self.portefeuille.abonner(self.AfficherAlertes)
+        self.portefeuille.abonner(self.SauvegardeCSV)
 
 
 
