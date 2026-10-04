@@ -3,17 +3,30 @@
 # des alertes de seuil et journalise chaque cycle dans portfolio.csv.
 
 import tkinter as tk
-import yfinance as yf
+# import yfinance as yf
 from datetime import datetime
+
+
+from observateurs.AfficherAlertes import AfficherAlertes
+from observateurs.SauvegardeCSV import SauvegardeCSV
+from utilitaires import (
+    recuperer_prix,
+    
+    entier_positif,
+    flottant_positif
+)
+from modeles.portefeuille import Portefeuille
+from observateurs.AfficherPrix import AfficherPrix
+from observateurs.AfficherPortfolio import AfficherPortfolio
 
 
 # Portefeuille initial : quantité détenue + seuils d'alerte par ticker.
 # Modifié en place par l'UI (ajout/retrait/modification de titres).
-TITRES = {
-    "AAPL":  {"quantite": 10, "seuil_haut": 200.0, "seuil_bas": 150.0},
-    "GOOGL": {"quantite": 5,  "seuil_haut": 160.0, "seuil_bas": 120.0},
-    "MSFT":  {"quantite": 8,  "seuil_haut": 430.0, "seuil_bas": 380.0},
-}
+# TITRES = {
+#     "AAPL":  {"quantite": 10, "seuil_haut": 200.0, "seuil_bas": 150.0},
+#     "GOOGL": {"quantite": 5,  "seuil_haut": 160.0, "seuil_bas": 120.0},
+#     "MSFT":  {"quantite": 8,  "seuil_haut": 430.0, "seuil_bas": 380.0},
+# }
 
 INTERVALLE_MS = 30000  # Fréquence de rafraîchissement des prix (30 secondes)
 
@@ -27,38 +40,40 @@ POLICE_VALEUR = ("Segoe UI", 13, "bold")
 # validation. Regroupées ici pour être réutilisées à la fois par l'ajout de
 # titres et le cycle de rafraîchissement, sans dupliquer la logique.
 
-def recuperer_prix(ticker):
-    """Retourne (prix, ouverture) pour un ticker, ou lève une erreur s'il est introuvable."""
-    info = yf.Ticker(ticker).fast_info
-    prix = info["last_price"]
-    if prix is None:
-        raise ValueError(f"Le titre '{ticker}' n'existe pas.")
-    return prix, info["open"]
+
+# def recuperer_prix(ticker):
+#     """Retourne (prix, ouverture) pour un ticker, ou lève une erreur s'il est introuvable."""
+#     info = yf.Ticker(ticker).fast_info
+#     prix = info["last_price"]
+#     if prix is None:
+#         raise ValueError(f"Le titre '{ticker}' n'existe pas.")
+#     return prix, info["open"]
 
 
-def formater_prix(prix, ouverture):
-    """Retourne le texte et la couleur à afficher pour un prix et sa variation
-    par rapport à l'ouverture (vert si en hausse, rouge si en baisse)."""
-    variation = (prix - ouverture) / ouverture * 100
-    symbole = "▲" if variation >= 0 else "▼"
-    couleur = "green" if variation >= 0 else "red"
-    return f"{prix:.2f} $  {symbole} {abs(variation):.2f}%", couleur
+# def formater_prix(prix, ouverture):
+#     """Retourne le texte et la couleur à afficher pour un prix et sa variation
+#     par rapport à l'ouverture (vert si en hausse, rouge si en baisse)."""
+#     variation = (prix - ouverture) / ouverture * 100
+#     symbole = "▲" if variation >= 0 else "▼"
+#     couleur = "green" if variation >= 0 else "red"
+#     return f"{prix:.2f} $  {symbole} {abs(variation):.2f}%", couleur
 
 
-def entier_positif(texte):
-    """Convertit `texte` en entier strictement positif, ou lève ValueError."""
-    valeur = int(texte)
-    if valeur <= 0:
-        raise ValueError
-    return valeur
+# def entier_positif(texte):
+#     """Convertit `texte` en entier strictement positif, ou lève ValueError."""
+#     valeur = int(texte)
+#     if valeur <= 0:
+#         raise ValueError
+#     return valeur
 
 
-def flottant_positif(texte):
-    """Convertit `texte` en nombre décimal strictement positif, ou lève ValueError."""
-    valeur = float(texte)
-    if valeur <= 0:
-        raise ValueError
-    return valeur
+# def flottant_positif(texte):
+#     """Convertit `texte` en nombre décimal strictement positif, ou lève ValueError."""
+#     valeur = float(texte)
+#     if valeur <= 0:
+#         raise ValueError
+#     return valeur
+
 
 
 class App:
@@ -71,36 +86,55 @@ class App:
         # labels_prix : ticker -> Label affichant "prix ▲/▼ variation%"
         # frames_prix : ticker -> Frame conteneur de cette ligne, pour pouvoir
         # la détruire proprement quand un titre est retiré
-        self.labels_prix = {}
-        self.frames_prix = {}
+        #self.labels_prix = {}
+        #self.frames_prix = {}
+        self.portefeuille = Portefeuille()
 
         tk.Label(self.fenetre, text="Portfolio Tracker", font=POLICE_TITRE).pack(pady=10)
 
         # Section "Prix en temps réel" : une ligne par titre du portefeuille
-        self.frame_prix = tk.LabelFrame(self.fenetre, text="Prix en temps réel", padx=10, pady=10)
-        self.frame_prix.pack(fill=tk.X, padx=10, pady=5)
-        for ticker in TITRES:
-            self._creer_ligne_prix(ticker)
+        #self.frame_prix = tk.LabelFrame(self.fenetre, text="Prix en temps réel", padx=10, pady=10)
+        #self.frame_prix.pack(fill=tk.X, padx=10, pady=5)
+        #for ticker in TITRES:
+        #    self._creer_ligne_prix(ticker)
 
         # Section "Gérer les titres" : ajout, retrait, modification (voir plus bas)
         self._construire_gestion()
 
         # Section "Mon portfolio" : valeur totale et variation depuis l'ouverture,
         # mises à jour à chaque cycle de rafraîchir()
-        frame_portfolio = tk.LabelFrame(self.fenetre, text="Mon portfolio", padx=10, pady=10)
-        frame_portfolio.pack(fill=tk.X, padx=10, pady=5)
-        self.label_valeur = tk.Label(frame_portfolio, text="Valeur totale : calcul en cours...", font=POLICE_VALEUR)
-        self.label_valeur.pack()
-        self.label_variation = tk.Label(frame_portfolio, text="")
-        self.label_variation.pack()
+        #frame_portfolio = tk.LabelFrame(self.fenetre, text="Mon portfolio", padx=10, pady=10)
+        #frame_portfolio.pack(fill=tk.X, padx=10, pady=5)
+        #self.label_valeur = tk.Label(frame_portfolio, text="Valeur totale : calcul en cours...", font=POLICE_VALEUR)
+        #self.label_valeur.pack()
+
+
+
+
+        #self.label_variation = tk.Label(frame_portfolio, text="")
+        #self.label_variation.pack()
+        
+        self.afficher_prix = AfficherPrix(self.fenetre, self.portefeuille.gestion_titre)
+        self.afficher_portfolio = AfficherPortfolio(self.fenetre)
+        self.AfficherAlertes = AfficherAlertes(self.fenetre)
+        self.SauvegardeCSV = SauvegardeCSV()
+        self.portefeuille.abonner(self.afficher_prix)
+        self.portefeuille.abonner(self.afficher_portfolio)
+        self.portefeuille.abonner(self.AfficherAlertes)
+        self.portefeuille.abonner(self.SauvegardeCSV)
+
+
+
+
+
 
         # Section "Alertes" : liste des titres ayant franchi un seuil, ou message par défaut
-        frame_alertes = tk.LabelFrame(self.fenetre, text="Alertes", padx=10, pady=10)
-        frame_alertes.pack(fill=tk.X, padx=10, pady=5)
-        self.label_alertes = tk.Label(
-            frame_alertes, text="Aucune alerte", fg="gray", justify=tk.LEFT, wraplength=380
-        )
-        self.label_alertes.pack(anchor="w")
+        #frame_alertes = tk.LabelFrame(self.fenetre, text="Alertes", padx=10, pady=10)
+        #frame_alertes.pack(fill=tk.X, padx=10, pady=5)
+        #self.label_alertes = tk.Label(
+        #    frame_alertes, text="Aucune alerte", fg="gray", justify=tk.LEFT, wraplength=380
+        #)
+        #self.label_alertes.pack(anchor="w")
 
         self.label_maj = tk.Label(self.fenetre, text="", font=("Segoe UI", 9), fg="gray")
         self.label_maj.pack(pady=5)
@@ -140,7 +174,7 @@ class App:
         ligne_liste.pack(fill=tk.X)
         self.listbox_titres = tk.Listbox(ligne_liste, height=4, exportselection=False)
         self.listbox_titres.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        for ticker in TITRES:
+        for ticker in self.portefeuille.gestion_titre:
             self.listbox_titres.insert(tk.END, self._texte_listbox(ticker))
         tk.Button(ligne_liste, text="Retirer", command=self.retirer_titre).pack(side=tk.LEFT, padx=(5, 0), anchor="n")
 
@@ -166,20 +200,20 @@ class App:
         entry.pack(side=tk.LEFT, padx=(2, 8))
         return entry
 
-    def _creer_ligne_prix(self, ticker):
+    #def _creer_ligne_prix(self, ticker):
         """Ajoute la ligne d'affichage de prix pour un ticker (appelé au
         démarrage pour chaque titre, et à nouveau quand un titre est ajouté)."""
-        frame = tk.Frame(self.frame_prix)
-        frame.pack(fill=tk.X, pady=2)
-        tk.Label(frame, text=f"{ticker}:", width=8, font=("Segoe UI", 10, "bold"), anchor="w").pack(side=tk.LEFT)
-        label = tk.Label(frame, text="Chargement...")
-        label.pack(side=tk.LEFT)
-        self.labels_prix[ticker] = label
-        self.frames_prix[ticker] = frame
+        #frame = tk.Frame(self.frame_prix)
+        #frame.pack(fill=tk.X, pady=2)
+        #tk.Label(frame, text=f"{ticker}:", width=8, font=("Segoe UI", 10, "bold"), anchor="w").pack(side=tk.LEFT)
+        #label = tk.Label(frame, text="Chargement...")
+        #label.pack(side=tk.LEFT)
+        #self.labels_prix[ticker] = label
+        #self.frames_prix[ticker] = frame
 
     def _texte_listbox(self, ticker):
         """Construit la ligne texte affichée dans la liste pour un ticker."""
-        infos = TITRES[ticker]
+        infos = self.portefeuille.gestion_titre[ticker]
         return (
             f"{ticker} — {infos['quantite']} action(s) "
             f"(alerte : {infos['seuil_bas']:.2f} $ / {infos['seuil_haut']:.2f} $)"
@@ -212,7 +246,7 @@ class App:
         ticker = self.entry_ticker.get().strip().upper()
         if not ticker:
             return
-        if ticker in TITRES:
+        if ticker in self.portefeuille.gestion_titre:
             self._statut(f"{ticker} est déjà dans le portfolio.", "orange")
             return
 
@@ -243,15 +277,30 @@ class App:
             self._statut(f"Le titre '{ticker}' n'existe pas.", "red")
             return
 
-        TITRES[ticker] = {
-            "quantite": quantite,
-            "seuil_haut": round(seuil_haut if seuil_haut is not None else prix * 1.2, 2),
-            "seuil_bas": round(seuil_bas if seuil_bas is not None else prix * 0.8, 2),
-        }
+        #TITRES[ticker] = {
+            #"quantite": quantite,
+            #"seuil_haut": round(seuil_haut if seuil_haut is not None else prix * 1.2, 2),
+            #"seuil_bas": round(seuil_bas if seuil_bas is not None else prix * 0.8, 2),
+        #}
 
         # Mise à jour de l'UI : nouvelle ligne de prix, nouvelle entrée dans la
         # liste, puis réinitialisation du formulaire d'ajout
-        self._creer_ligne_prix(ticker)
+        
+        if seuil_bas is None:
+            seuil_bas = round(prix * 0.8, 2)
+
+        if seuil_haut is None:
+            seuil_haut = round(prix * 1.2, 2)
+
+
+
+        self.portefeuille.ajouter_titre(
+            ticker,
+            quantite,
+            seuil_haut,
+            seuil_bas
+        )
+        #self._creer_ligne_prix(ticker)
         self.listbox_titres.insert(tk.END, self._texte_listbox(ticker))
         for entry, valeur in (
             (self.entry_ticker, ""), (self.entry_quantite, "1"),
@@ -262,8 +311,8 @@ class App:
 
         # Affiche le prix tout de suite plutôt que d'attendre le prochain
         # cycle de rafraîchir() (jusqu'à INTERVALLE_MS plus tard)
-        texte, couleur = formater_prix(prix, ouverture)
-        self.labels_prix[ticker].config(text=texte, fg=couleur)
+        #texte, couleur = formater_prix(prix, ouverture)
+        #self.labels_prix[ticker].config(text=texte, fg=couleur)
         self._statut(f"{ticker} ajouté au portfolio ({quantite} action(s)).", "green")
 
     def retirer_titre(self):
@@ -276,9 +325,11 @@ class App:
         index, ticker = selectionne
 
         self.listbox_titres.delete(index)
-        del TITRES[ticker]
-        self.labels_prix.pop(ticker, None)
-        self.frames_prix.pop(ticker).destroy()
+        #del TITRES[ticker]
+        #self.labels_prix.pop(ticker, None)
+        #self.frames_prix.pop(ticker).destroy()
+
+        self.portefeuille.retirer_titre(ticker)
 
         self._statut(f"{ticker} retiré du portfolio.", "gray")
 
@@ -292,6 +343,13 @@ class App:
             return
         index, ticker = selectionne
 
+
+        titre = self.portefeuille.gestion_titre[ticker]
+
+        quantite = titre["quantite"]
+        seuil_bas = titre["seuil_bas"]
+        seuil_haut = titre["seuil_haut"]
+
         texte_qte = self.entry_nouvelle_quantite.get().strip()
         texte_bas = self.entry_nouveau_seuil_bas.get().strip()
         texte_haut = self.entry_nouveau_seuil_haut.get().strip()
@@ -302,8 +360,8 @@ class App:
         changements = []
         try:
             if texte_qte:
-                TITRES[ticker]["quantite"] = entier_positif(texte_qte)
-                changements.append(f"{TITRES[ticker]['quantite']} action(s)")
+                quantite = entier_positif(texte_qte)
+                changements.append(f"{quantite} action(s)")
             if texte_bas or texte_haut:
                 if not (texte_bas and texte_haut):
                     self._statut("Les deux alertes doivent être fournies ensemble.", "red")
@@ -312,12 +370,14 @@ class App:
                 if seuil_bas >= seuil_haut:
                     self._statut("L'alerte basse doit être inférieure à l'alerte haute.", "red")
                     return
-                TITRES[ticker]["seuil_bas"] = round(seuil_bas, 2)
-                TITRES[ticker]["seuil_haut"] = round(seuil_haut, 2)
+                seuil_bas = round(seuil_bas, 2)
+                seuil_haut = round(seuil_haut, 2)
                 changements.append(f"alertes {seuil_bas:.2f} $ / {seuil_haut:.2f} $")
         except ValueError:
             self._statut("La quantité et les alertes doivent être des nombres positifs.", "red")
             return
+
+        self.portefeuille.modifier_titre(ticker, quantite, seuil_haut, seuil_bas)
 
         self._rafraichir_ligne_listbox(index, ticker)
         for entry in (self.entry_nouvelle_quantite, self.entry_nouveau_seuil_bas, self.entry_nouveau_seuil_haut):
@@ -332,41 +392,44 @@ class App:
         puis se replanifie elle-même dans INTERVALLE_MS millisecondes.
         Toute erreur (ex. réseau) est affichée sans interrompre le cycle."""
         try:
+
+            self.portefeuille.actualiser_portefeuille()
+           
             # 1. Récupération des prix actuels pour tous les titres du portefeuille
-            prix_actuels = {ticker: recuperer_prix(ticker) for ticker in TITRES}
+            #prix_actuels = {ticker: recuperer_prix(ticker) for ticker in TITRES}
 
             # 2. Mise à jour de l'affichage prix/variation de chaque titre
-            for ticker, (prix, ouverture) in prix_actuels.items():
-                texte, couleur = formater_prix(prix, ouverture)
-                self.labels_prix[ticker].config(text=texte, fg=couleur)
+            #for ticker, (prix, ouverture) in prix_actuels.items():
+                #texte, couleur = formater_prix(prix, ouverture)
+                #self.labels_prix[ticker].config(text=texte, fg=couleur)
 
             # 3. Valeur totale du portefeuille et variation depuis l'ouverture
-            valeur_totale = sum(prix * TITRES[t]["quantite"] for t, (prix, _) in prix_actuels.items())
-            valeur_ouverture = sum(ouv * TITRES[t]["quantite"] for t, (_, ouv) in prix_actuels.items())
-            variation_portfolio = valeur_totale - valeur_ouverture
+            #valeur_totale = sum(prix * TITRES[t]["quantite"] for t, (prix, _) in prix_actuels.items())
+            #valeur_ouverture = sum(ouv * TITRES[t]["quantite"] for t, (_, ouv) in prix_actuels.items())
+            #variation_portfolio = valeur_totale - valeur_ouverture
 
-            self.label_valeur.config(text=f"Valeur totale : {valeur_totale:.2f} $")
-            symbole = "▲" if variation_portfolio >= 0 else "▼"
-            self.label_variation.config(
-                text=f"{symbole} {abs(variation_portfolio):.2f} $ depuis l'ouverture",
-                fg="green" if variation_portfolio >= 0 else "red",
-            )
+            #self.label_valeur.config(text=f"Valeur totale : {valeur_totale:.2f} $")
+            #symbole = "▲" if variation_portfolio >= 0 else "▼"
+            #self.label_variation.config(
+                #text=f"{symbole} {abs(variation_portfolio):.2f} $ depuis l'ouverture",
+                #fg="green" if variation_portfolio >= 0 else "red",
+            #)
 
             # 4. Alertes : un titre est signalé s'il atteint ou dépasse son seuil haut,
             # ou atteint ou descend sous son seuil bas
-            alertes = []
-            for ticker, (prix, _) in prix_actuels.items():
-                if prix >= TITRES[ticker]["seuil_haut"]:
-                    alertes.append(f"⚠️ {ticker} dépasse le seuil haut ({prix:.2f} $ ≥ {TITRES[ticker]['seuil_haut']:.2f} $)")
-                elif prix <= TITRES[ticker]["seuil_bas"]:
-                    alertes.append(f"⚠️ {ticker} sous le seuil bas ({prix:.2f} $ ≤ {TITRES[ticker]['seuil_bas']:.2f} $)")
-            self.label_alertes.config(text="\n".join(alertes) if alertes else "Aucune alerte", fg="red" if alertes else "gray")
+            # alertes = []
+            # for ticker, (prix, _) in prix_actuels.items():
+            #     if prix >= TITRES[ticker]["seuil_haut"]:
+            #         alertes.append(f"⚠️ {ticker} dépasse le seuil haut ({prix:.2f} $ ≥ {TITRES[ticker]['seuil_haut']:.2f} $)")
+            #     elif prix <= TITRES[ticker]["seuil_bas"]:
+            #         alertes.append(f"⚠️ {ticker} sous le seuil bas ({prix:.2f} $ ≤ {TITRES[ticker]['seuil_bas']:.2f} $)")
+            # self.label_alertes.config(text="\n".join(alertes) if alertes else "Aucune alerte", fg="red" if alertes else "gray")
 
             # 5. Journalisation : une ligne par titre est ajoutée au CSV à chaque cycle
             horodatage = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            with open("portfolio.csv", "a") as f:
-                for ticker, (prix, ouverture) in prix_actuels.items():
-                    f.write(f"{horodatage},{ticker},{prix:.2f},{ouverture:.2f}\n")
+            # with open("portfolio.csv", "a") as f:
+            #     for ticker, (prix, ouverture) in prix_actuels.items():
+            #         f.write(f"{horodatage},{ticker},{prix:.2f},{ouverture:.2f}\n")
 
             self.label_maj.config(text=f"Dernière mise à jour : {horodatage}", fg="gray")
 
