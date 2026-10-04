@@ -49,8 +49,17 @@ class AfficherPrix(Observateur):
 
     def actualiser(self, sujet):
         donnees = sujet.get_donnees()
+        titres = donnees["gestion_titre"]
         prix_en_temps_reel = donnees["prix_en_temps_reel"]
 
+        # Supprimer les lignes des titres qui n'existent plus
+        for ticker in list(self.frames_prix.keys()):
+            if ticker not in titres:
+                self.frames_prix[ticker].destroy()
+                del self.frames_prix[ticker]
+                self.labels_prix.pop(ticker, None)
+
+        # Créer ou mettre à jour les lignes de prix
         for ticker, (prix, ouverture) in prix_en_temps_reel.items():
 
             if ticker not in self.labels_prix:
