@@ -1,11 +1,12 @@
 import tkinter as tk
+
 from observateurs.observateur import Observateur
 from utilitaires import formater_prix
 
 
 class AfficherPrix(Observateur):
 
-    def __init__(self, parent, titres):
+    def __init__(self, parent):
         self.frame = tk.LabelFrame(
             parent,
             text="Prix en temps réel",
@@ -16,9 +17,6 @@ class AfficherPrix(Observateur):
 
         self.labels_prix = {}
         self.frames_prix = {}
-
-        for ticker in titres:
-            self._creer_ligne(ticker)
 
     def _creer_ligne(self, ticker):
         ligne = tk.Frame(self.frame)
@@ -40,35 +38,29 @@ class AfficherPrix(Observateur):
         self.labels_prix[ticker] = label_prix
         self.frames_prix[ticker] = ligne
 
-    def ajouter_titre(self, ticker):
-        if ticker not in self.labels_prix:
-            self._creer_ligne(ticker)
-
-    def retirer_titre(self, ticker):
-        if ticker in self.labels_prix:
-            self.labels_prix[ticker].master.destroy()
-            del self.labels_prix[ticker]
-            del self.frames_prix[ticker]
-
     def actualiser(self, sujet):
         donnees = sujet.get_donnees()
+
         titres = donnees["gestion_titre"]
         prix_en_temps_reel = donnees["prix_en_temps_reel"]
 
-        # Supprimer les lignes des titres qui n'existent plus
+        # Supprime les titres qui n'existent plus
         for ticker in list(self.frames_prix.keys()):
             if ticker not in titres:
                 self.frames_prix[ticker].destroy()
                 del self.frames_prix[ticker]
                 self.labels_prix.pop(ticker, None)
 
-        # Créer ou mettre à jour les lignes de prix
+        # Crée ou met à jour les titres
         for ticker, (prix, ouverture) in prix_en_temps_reel.items():
 
             if ticker not in self.labels_prix:
                 self._creer_ligne(ticker)
 
-            texte, couleur = formater_prix(prix, ouverture)
+            texte, couleur = formater_prix(
+                prix,
+                ouverture
+            )
 
             self.labels_prix[ticker].config(
                 text=texte,

@@ -1,4 +1,5 @@
 import tkinter as tk
+
 from observateurs.observateur import Observateur
 
 
@@ -11,7 +12,11 @@ class AfficherAlertes(Observateur):
             padx=10,
             pady=10
         )
-        self.frame.pack(fill="x", padx=20, pady=10)
+        self.frame.pack(
+            fill="x",
+            padx=20,
+            pady=10
+        )
 
         self.label_alertes = tk.Label(
             self.frame,
@@ -24,8 +29,13 @@ class AfficherAlertes(Observateur):
     def actualiser(self, sujet):
         donnees = sujet.get_donnees()
 
-        prix_en_temps_reel = donnees["prix_en_temps_reel"]
-        gestion_titre = donnees["gestion_titre"]
+        prix_en_temps_reel = donnees[
+            "prix_en_temps_reel"
+        ]
+
+        gestion_titre = donnees[
+            "gestion_titre"
+        ]
 
         alertes = []
 
@@ -36,16 +46,22 @@ class AfficherAlertes(Observateur):
             if prix >= titre["seuil_haut"]:
                 alertes.append(
                     f"⚠️ {ticker} dépasse le seuil haut "
-                    f"({prix:.2f} $ ≥ {titre['seuil_haut']:.2f} $)"
+                    f"({prix:.2f} $ ≥ "
+                    f"{titre['seuil_haut']:.2f} $)"
                 )
 
             elif prix <= titre["seuil_bas"]:
                 alertes.append(
                     f"⚠️ {ticker} sous le seuil bas "
-                    f"({prix:.2f} $ ≤ {titre['seuil_bas']:.2f} $)"
+                    f"({prix:.2f} $ ≤ "
+                    f"{titre['seuil_bas']:.2f} $)"
                 )
 
         self.label_alertes.config(
-            text="\n".join(alertes) if alertes else "Aucune alerte",
+            text=(
+                "\n".join(alertes)
+                if alertes
+                else "Aucune alerte"
+            ),
             fg="red" if alertes else "gray"
         )
